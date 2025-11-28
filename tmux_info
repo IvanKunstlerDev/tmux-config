@@ -1,0 +1,19 @@
+#!/bin/bash
+
+user_option=$1
+
+get_updates() {
+	local count=$(checkupdates 2>/dev/null | wc -l)
+	echo "$count"
+}
+
+case "$user_option" in
+--get-updates)
+	get_updates
+	;;
+
+*)
+	echo "Invalid option" >&2
+	exit 1
+	;;
+esac
