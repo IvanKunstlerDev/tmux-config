@@ -1,19 +1,104 @@
 #!/bin/bash
 
+declare -A WEATHER_ICONS=(
+    ["Sunny"]="󰖙"
+    ["Clear"]="󰖔"
+    ["Partly cloudy"]="󰖕"
+    ["Cloudy"]="󰖐"
+    ["Overcast"]="󰖐"
+    ["Mist"]="󰖑"
+    ["Fog"]="󰖑"
+
+    ["Light rain"]="󰖗"
+    ["Moderate rain"]="󰖖"
+    ["Heavy rain"]="󰖖"
+    ["Patchy light rain"]="󰖗"
+    ["Patchy rain possible"]="󰖗"
+
+    ["Light drizzle"]="󰖗"
+    ["Drizzle"]="󰖗"
+    ["Patchy light drizzle"]="󰖗"
+
+    ["Light snow"]="󰖘"
+    ["Moderate snow"]="󰖘"
+    ["Heavy snow"]="󰼶"
+    ["Patchy snow possible"]="󰖘"
+
+    ["Light sleet"]="󰖘"
+    ["Moderate sleet"]="󰖘"
+    ["Heavy sleet"]="󰼶"
+    ["Patchy sleet possible"]="󰖘"
+
+    ["Thunderstorm"]="󰙾"
+    ["Thunderstorm with rain"]="󰙾"
+    ["Thunderstorm possible"]="󰙾"
+)
+
+CACHE_FILE="$HOME/.cache/weather.txt"
+CACHE_TTL=600 # Seconds
+
 user_option=$1
 
 get_updates() {
-	local count=$(checkupdates 2>/dev/null | wc -l)
-	echo "$count"
+    local count=$(checkupdates 2>/dev/null | wc -l)
+    echo "$count"
+}
+
+fetch_weather() {
+    if [[ -f "$CACHE_FILE" ]]; then
+        diff=$(($(date +%s) - $(stat -c %Y "$CACHE_FILE")))
+        if [[ $diff -lt $CACHE_TTL ]]; then
+            cat "$CACHE_FILE"
+            return
+        fi
+    fi
+    local response=$(curl -s 'wttr.in/buenos_aires?format="%f+%C"')
+    local data=$(echo "$response" | sed -E 's/"//g; s/\+//g; s/ *°C//g')
+    echo "$data" >"$CACHE_FILE"
+    echo "$data"
+}
+
+get_weather_temp() {
+    local weather=$(fetch_weather)
+    local arr=($weather)
+    echo "${arr[0]}"
+}
+
+get_weather_cond() {
+    local weather=$(fetch_weather)
+    local arr=($weather)
+    echo "${arr[1]}"
+}
+
+get_weather_icon() {
+    local weather=$(fetch_weather)
+    local arr=($weather)
+    local condition_name="${arr[1]}"
+    echo "$condition_name"
+    local found_icon=${WEATHER_ICONS[$condition_name]}
+
+    if [[ -n "$found_icon" ]]; then
+        echo "$found_icon"
+    else
+        echo "󰼯"
+    fi
 }
 
 case "$user_option" in
 --get-updates)
-	get_updates
-	;;
-
+    get_updates
+    ;;
+--get-weather-temp)
+    get_weather_temp
+    ;;
+--get-weather-cond)
+    get_weather_cond
+    ;;
+--get-weather-icon)
+    get_weather_icon
+    ;;
 *)
-	echo "Invalid option" >&2
-	exit 1
-	;;
+    echo "Invalid option" >&2
+    exit 1
+    ;;
 esac
